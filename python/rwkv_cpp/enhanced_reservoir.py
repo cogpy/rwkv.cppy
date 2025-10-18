@@ -464,6 +464,9 @@ class EnhancedReservoirRWKV(ReservoirRWKV):
         enable_hierarchical_output: bool = False,
         hierarchical_configs: Optional[List[Dict[str, Any]]] = None,
         
+        # Reproducibility
+        random_seed: Optional[int] = 42,
+        
         # Standard RWKV parameters
         thread_count: Optional[int] = None,
         gpu_layer_count: int = 0,
@@ -515,6 +518,10 @@ class EnhancedReservoirRWKV(ReservoirRWKV):
         elif readout_type == 'hierarchical' or enable_hierarchical_output:
             self._initialize_hierarchical_readout(hierarchical_configs)
         
+        # Initialize random state for reproducible behavior
+        self.random_seed = random_seed
+        self.random_state = np.random.RandomState(random_seed) if random_seed is not None else np.random.RandomState()
+        
         # State scaling factors based on ESN parameters
         self._state_scaling_factor = 1.0
         self._update_state_scaling()
@@ -529,11 +536,19 @@ class EnhancedReservoirRWKV(ReservoirRWKV):
     def _apply_persona_configuration(self):
         """Apply chatbot persona configuration by adjusting ESN parameters."""
         if self.persona_type in ['conservative', 'balanced', 'creative']:
-            # Use predefined personality mappings
+            # Use predefined personality mappings for standard personas
             for param_name, param_info in self.esn_params.items():
                 if 'personality_mapping' in param_info:
                     if self.persona_type in param_info['personality_mapping']:
                         setattr(self, param_name, param_info['personality_mapping'][self.persona_type])
+        else:
+            # For custom personas, try to match with parameter-specific mappings
+            print(f"Applying custom persona '{self.persona_type}' configuration...")
+            for param_name, param_info in self.esn_params.items():
+                if 'personality_mapping' in param_info:
+                    if self.persona_type in param_info['personality_mapping']:
+                        setattr(self, param_name, param_info['personality_mapping'][self.persona_type])
+                        print(f"  - Set {param_name} to {param_info['personality_mapping'][self.persona_type]}")
         
         print(f"Applied persona '{self.persona_type}' configuration:")
         print(f"  Spectral radius: {self.spectral_radius} (stability/creativity)")
@@ -633,8 +648,8 @@ class EnhancedReservoirRWKV(ReservoirRWKV):
         
         # Apply density effects (feature selection/sparsity)
         if self.density < 1.0:
-            # Randomly mask features to simulate sparse connectivity
-            mask = np.random.random(activations.shape) < self.density
+            # Use seeded random state for reproducible sparsity patterns
+            mask = self.random_state.random(activations.shape) < self.density
             activations = activations * mask
         
         # Apply bias scaling
@@ -644,7 +659,8 @@ class EnhancedReservoirRWKV(ReservoirRWKV):
         
         # Apply noise for creativity/variability
         if self.noise_scaling > 0:
-            noise = np.random.normal(0, self.noise_scaling, activations.shape)
+            # Use seeded random state for reproducible noise
+            noise = self.random_state.normal(0, self.noise_scaling, activations.shape)
             activations = activations + noise
         
         return activations
