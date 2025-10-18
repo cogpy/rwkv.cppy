@@ -32,3 +32,17 @@ compile_commands.json
 .venv
 __pycache__
 .swiftpm
+
+# CMake build artifacts
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+CTestTestfile.cmake
+*.so
+*.dylib
+*.dll
+bin/
+
+# Test generated files
+tests/*-to-Q*.bin
