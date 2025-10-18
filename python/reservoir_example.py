@@ -10,7 +10,6 @@ import numpy as np
 from typing import List, Tuple
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
-import matplotlib.pyplot as plt
 
 # Add the current directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))

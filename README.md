@@ -4,13 +4,25 @@ This is a port of [BlinkDL/RWKV-LM](https://github.com/BlinkDL/RWKV-LM) to [gger
 
 Besides the usual **FP32**, it supports **FP16**, **quantized INT4, INT5 and INT8** inference. This project is **focused on CPU**, but cuBLAS is also supported.
 
-This project provides [a C library rwkv.h](rwkv.h) and [a convinient Python wrapper](python%2Frwkv_cpp%2Frwkv_cpp_model.py) for it.
+This project provides [a C library rwkv.h](rwkv.h) and [a convinient Python wrapper](python%2Frwkv_cpp%2Frwkv_cpp_model.py) for it. Additionally, it includes [ReservoirRWKV](python%2Frwkv_cpp%2Freservoir.py) - a Reservoir Computing implementation that uses RWKV as a reservoir layer, providing a ReservoirPy-compatible API.
 
 [RWKV](https://arxiv.org/abs/2305.13048) is a large language model architecture. In contrast to Transformer with `O(n^2)` attention, RWKV requires only state from previous step to calculate logits. This makes RWKV very CPU-friendly on large context lenghts.
 
 This project supports RWKV [v4](https://huggingface.co/BlinkDL/rwkv-4-pile-14b), [v5](https://huggingface.co/BlinkDL/rwkv-5-world), [v6](https://huggingface.co/BlinkDL/rwkv-6-world) and the latest [v7](https://huggingface.co/BlinkDL/rwkv-7-world) architectures.
 
 Loading LoRA checkpoints in [Blealtan's format](https://github.com/Blealtan/RWKV-LM-LoRA) is supported through [merge_lora_into_ggml.py script](rwkv%2Fmerge_lora_into_ggml.py).
+
+## Reservoir Computing
+
+This project includes **ReservoirRWKV**, a novel implementation of Reservoir Computing that uses RWKV models as reservoir layers. This provides:
+
+- **Echo State Network functionality** with RWKV as the reservoir (fixed weights)
+- **ReservoirPy-compatible API** for easy migration and integration
+- **Efficient sequential processing** leveraging RWKV's O(n) complexity
+- **Ridge regression readout layers** for various prediction tasks
+- **Time series prediction, memory tasks, and classification** support
+
+See [docs/RESERVOIR_COMPUTING.md](docs/RESERVOIR_COMPUTING.md) for detailed documentation and examples.
 
 <!-- TODO: Update data below -->
 
@@ -190,6 +202,33 @@ Edit [generate_completions.py](rwkv%2Fgenerate_completions.py) or [chat_with_bot
 The short and simple script [inference_example.py](python%2Finference_example.py) demostrates the use of `rwkv.cpp` in Python.
 
 To use `rwkv.cpp` in C/C++, include the header [rwkv.h](rwkv.h).
+
+#### Using ReservoirRWKV for Reservoir Computing
+
+```python
+from rwkv_cpp import RWKVSharedLibrary, ReservoirRWKV
+import numpy as np
+
+# Initialize
+library = RWKVSharedLibrary("librwkv.so")
+reservoir = ReservoirRWKV(
+    shared_library=library,
+    model_path="model.bin",
+    units=256,
+    alpha=1e-4
+)
+
+# Train on sequences
+X_train = [[1, 2, 3, 4], [5, 6, 7, 8]]  # Token sequences
+y_train = np.array([[0.1], [0.9]])      # Targets
+
+reservoir.fit(X_train, y_train)
+
+# Predict
+predictions = reservoir.predict([1, 2, 3, 4])
+```
+
+See [python/reservoir_example.py](python%2Freservoir_example.py) for complete examples including time series prediction and memory tasks.
 
 To use `rwkv.cpp` in any other language, see [Bindings](#Bindings) section below. If your language is missing, you can try to bind to the C API using the tooling provided by your language.
 

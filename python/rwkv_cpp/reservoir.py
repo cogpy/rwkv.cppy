@@ -20,6 +20,7 @@ except ImportError:
 
 try:
     from sklearn.linear_model import Ridge
+    from sklearn.metrics import r2_score
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
@@ -341,6 +342,10 @@ class ReservoirRWKV:
         # Apply readout layer
         predictions = self._ridge_regressor.predict(activations)
         
+        # Ensure consistent shape (flatten if single output)
+        if predictions.ndim > 1 and predictions.shape[1] == 1:
+            predictions = predictions.flatten()
+        
         return predictions
         
     def run(
@@ -418,11 +423,7 @@ class ReservoirRWKV:
                     all_targets.append(target)
                     
             # Concatenate predictions and targets correctly
-            if all(pred.ndim == 1 for pred in all_predictions):
-                y_pred = np.concatenate(all_predictions)
-            else:
-                y_pred = np.vstack(all_predictions)
-                
+            y_pred = np.concatenate(all_predictions)  # Now always 1D after predict fix
             y_true = np.vstack(all_targets)
             if y_true.ndim > 1 and y_true.shape[1] == 1:
                 y_true = y_true.flatten()
@@ -435,7 +436,6 @@ class ReservoirRWKV:
                 y_true = y_true[warmup:]
                 
         # Calculate R^2 score using sklearn's built-in r2 score
-        from sklearn.metrics import r2_score
         return r2_score(y_true, y_pred)
         
     def __del__(self):
