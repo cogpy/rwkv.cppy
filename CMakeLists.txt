@@ -11,6 +11,9 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# ESN chatbot extension
+option(RWKV_BUILD_ESN              "rwkv: build ESN chatbot extension"                    ON)
+
 #
 # Option list
 #
@@ -282,6 +285,23 @@ if (GGML_RPC)
 endif()
 
 target_link_libraries(rwkv PRIVATE $<TARGET_OBJECTS:ggml> $<TARGET_OBJECTS:ggml-base> $<TARGET_OBJECTS:ggml-cpu> ${RWKV_EXTRA_LIBS})
+
+# ESN chatbot extension library
+if (RWKV_BUILD_ESN)
+    if (RWKV_BUILD_SHARED_LIBRARY)
+        add_library(esn SHARED esn.cpp esn.h)
+    else()
+        add_library(esn esn.cpp esn.h)
+    endif()
+    
+    target_link_libraries(esn PRIVATE rwkv ${RWKV_EXTRA_LIBS})
+    target_include_directories(esn PRIVATE .)
+    
+    if (RWKV_BUILD_SHARED_LIBRARY)
+        set_target_properties(esn PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        target_compile_definitions(esn PRIVATE ESN_SHARED ESN_BUILD)
+    endif()
+endif()
 
 if (RWKV_BUILD_SHARED_LIBRARY)
     set_target_properties(ggml PROPERTIES POSITION_INDEPENDENT_CODE ON)
